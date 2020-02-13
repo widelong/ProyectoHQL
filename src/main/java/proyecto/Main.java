@@ -85,7 +85,7 @@ public class Main {
 			}
 			Session getObserv = HibernateUtil.getSessionFactory().openSession();
 			q = getObserv.createQuery("from ResidenciasObservaciones ");
-			observaciones = new ArrayList<ResidenciasObservaciones>();
+			observaciones = new ArrayList<ResidenciasObservaciones>(q.list());
 			observacionesText = new ArrayList<String>();
 			codigosResiOb = new ArrayList<Integer>();
 			for (int i = 0; i < observaciones.size(); i++) {
@@ -98,7 +98,7 @@ public class Main {
 			estudiantes = new ArrayList<Estudiantes>(q.list());
 			codigosEstu = new ArrayList<Integer>();
 			nombresEstu = new ArrayList<String>();
-			getResis.close();
+			getEstud.close();
 			for (int i = 0; i < estudiantes.size(); i++) {
 				codigosEstu.add(estudiantes.get(i).getCodEstudiante());
 				nombresEstu.add(estudiantes.get(i).getNomEstudiante());
@@ -232,7 +232,7 @@ public class Main {
 		}
 		int precio = -1;
 		String precioS = "";
-		while (precio < 0) {
+		while (precio < 0 || precio > 32767) {
 			System.out.println("Introduzca un nuevo precio pagado por la estancia");
 			precioS = scanner.nextLine();
 			try {
@@ -300,12 +300,13 @@ public class Main {
 		Session update = HibernateUtil.getSessionFactory().openSession();
 		Transaction trans = update.beginTransaction();
 		Query q = update.createQuery("update Estancias set codResidencia = :codres , codEstudiante = :codestu "
-				+ ", fechaInicio = :fechainicio, precioPagado = :preciopagado, fechaFin = :fechaFin where codEsta = :codesta ");
+				+ ", fechaInicio = :fechainicio, precioPagado = :preciopagado, fechaFin = :fechafin where codEstancia = :codesta ");
 		q.setInteger("codres", codResi);
 		q.setInteger("codestu", codEstu);
 		q.setDate("fechainicio", inicio);
 		q.setDate("fechafin", fin);
 		q.setInteger("codesta", codEsta);
+		q.setInteger("preciopagado", precio);
 		q.executeUpdate();
 
 		update.close();
@@ -472,7 +473,8 @@ public class Main {
 			System.out.println("Comedor: " + residencias.get(i).getComedor());
 			System.out.println("Precio Mensual: " + residencias.get(i).getPrecioMensual());
 			if (codigosResiOb.contains(residencias.get(i).getCodResidencia())){
-				System.out.println("Observaciones: " + observacionesText.get(codigosResiOb.indexOf(residencias.get(i).getCodResidencia())));
+				int index = codigosResiOb.indexOf(residencias.get(i).getCodResidencia());
+				System.out.println("Observaciones: " + observaciones.get(index).getObservaciones());
 			}
 			System.out.println("----------------");
 		}
@@ -516,29 +518,15 @@ public class Main {
 		System.out.println("Introduzca un nuevo nombre para la residencia");
 		String nomRes = scanner.nextLine();
 		int precio = -1;
-		while (precio < 0) {
-			System.out.println("Introduzca un nuevo precio para la residencia");
+		while (precio < 0 || precio > 32767) {
+			System.out.println("Introduzca un nuevo precio para la residencia (mayor que 0 y menor que 32767)");
 			String precioS = scanner.nextLine();
 			try {
-				precio = Integer.parseInt(precioS);
+				precio = Integer.parseInt(precioS.trim());
 			} catch (NumberFormatException e) {
 			}
 		}
-		int i = -1;
-		while (i < 0 || i > 2) {
-			System.out.println("Indique si desea introducir observacion: 1 = Si, 2 = No");
-			try {
-				String s = scanner.nextLine();
-				i = Integer.parseInt(s);
-			} catch (NumberFormatException e) {
-				System.out.println("Introduce 1 o 2");
-			}
-		}
-		String observacion = "";
-		if (i == 1) {
-			System.out.println("Introduzca observacion: ");
-			observacion = scanner.nextLine();
-		}
+	
 		Session update = HibernateUtil.getSessionFactory().openSession();
 		Transaction trans = update.beginTransaction();
 		Query q = update.createQuery("update Residencias set codUniversidad = :coduni , Comedor = :comedor "
@@ -572,6 +560,12 @@ public class Main {
 		Session delete = HibernateUtil.getSessionFactory().openSession();
 		Transaction trans = delete.beginTransaction();
 		Query q = delete.createQuery("delete from Residencias where codResidencia = :id ");
+		q.setInteger("id", codResi);
+		q.executeUpdate();
+		q = delete.createQuery("delete from Estancias where codResidencia = :id ");
+		q.setInteger("id", codResi);
+		q.executeUpdate();
+		q = delete.createQuery("delete from ResidenciasObservaciones where codResidencia = :id ");
 		q.setInteger("id", codResi);
 		q.executeUpdate();
 		System.out.println("Valor borrado");
@@ -675,7 +669,7 @@ public class Main {
 		System.out.println("Introduzca un nombre para la residencia");
 		String nomRes = scanner.nextLine();
 		int precio = -1;
-		while (precio < 0) {
+		while (precio < 0 || precio > 32767) {
 			System.out.println("Introduzca un precio para la residencia");
 			String precioS = scanner.nextLine();
 			try {
@@ -700,9 +694,9 @@ public class Main {
 		}
 		Session sesion = HibernateUtil.getSessionFactory().openSession();
 		Transaction trans = sesion.beginTransaction();
-		Universidades universidad = new Universidades();
-		for (int j = 0; j < universidades.size(); j++) {
-			if (universidades.get(j).getCodUniversidad() == codUni) {
+		Universidades universidad = null;
+		for (int j = 0; j < codigosUni.size(); j++) {
+			if (codigosUni.get(j).equals(codUni.trim())) {
 				universidad = universidades.get(j);
 			}
 		}
